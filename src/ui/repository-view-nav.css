@@ -1,0 +1,368 @@
+/* App icons form the base; their original controls expand in the layer above. */
+html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls {
+  display: grid;
+  padding-top: 12px;
+  grid-template-columns: 44px 44px minmax(0, 1fr);
+  column-gap: 8px;
+  row-gap: 12px;
+  align-items: center;
+}
+html body :is(#data-timebar, #activity-timebar).repository-parallel-controls > .repository-dock-heading {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  align-items: start;
+  column-gap: 16px;
+  grid-column: 1 / -1;
+  grid-row: 1;
+  min-width: 0;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-dock-tools {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  min-width: 0;
+}
+html body :is(#data-timebar, #activity-timebar).repository-parallel-controls > .repository-view-nav {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  justify-self: end;
+  align-self: end;
+  width: 230px;
+  max-width: 100%;
+}
+html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > #repository-opacity-trigger { grid-column: 1; grid-row: 2; align-self: center; }
+html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > #repository-timeline-trigger { grid-column: 2; grid-row: 2; }
+html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > .repository-dock-actions { display: flex; grid-column: 3; grid-row: 2; justify-self: end; }
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls {
+  display: grid;
+  grid-template-columns: 30px 38px minmax(80px, 1fr) 30px auto;
+  gap: 6px;
+  align-items: center;
+  min-width: 0;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > .t-mid { grid-column: 3; grid-row: 1; }
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-prev, #activity-prev) { grid-column: 1; grid-row: 1; }
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-play, #activity-play) { grid-column: 2; grid-row: 1; }
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-next, #activity-next) { grid-column: 4; grid-row: 1; }
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(.data-speed, .activity-speed) { grid-column: 5; grid-row: 1; }
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav,
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav > .seg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  box-shadow: none;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-height: 32px;
+  margin: 0;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  box-shadow: none;
+  color: #aebdce;
+  font: 500 11px/1.3 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 150ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav button:hover { color: #f0f4fa; background: none; box-shadow: none; }
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav button[aria-pressed="true"] { color: #efd7b4; background: none; box-shadow: none; }
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav button:focus-visible { outline: 2px solid var(--accent-cool); outline-offset: -2px; }
+@media (max-width: 900px) {
+  html body :is(#data-timebar, #activity-timebar) .repository-view-nav button { min-height: 36px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body :is(#data-timebar, #activity-timebar) .repository-view-nav button { transition: none; }
+}
+
+/* Independent controls share a row: appearance on the left, scene views on the right. */
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav { min-height: 32px; }
+html body :is(#data-timebar, #activity-timebar) .repository-dock-tools > [hidden],
+html body :is(#data-timebar, #activity-timebar) .repository-view-nav > [hidden] { display: none !important; }
+html body :is(#data-timebar, #activity-timebar) .repository-opacity-inline {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: min(220px, 100%);
+  height: 32px;
+  padding: 0;
+  grid-column: 1;
+  grid-row: 1;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-opacity-back {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 32px;
+  height: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: none;
+  box-shadow: none;
+  color: #aebdce;
+  cursor: pointer;
+}
+html body :is(#data-timebar, #activity-timebar) .repository-opacity-back:hover { color: #f0f4fa; }
+html body :is(#data-timebar, #activity-timebar) .repository-opacity-back:focus-visible { outline: 2px solid var(--accent-cool); outline-offset: -2px; }
+html body .repository-opacity-back svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+html body :is(#data-timebar, #activity-timebar) #repository-opacity-range {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 28px;
+  margin: 0;
+  background: linear-gradient(to right, #c4dfff 0%, #c4dfff var(--glass-opacity-percent), rgba(196, 223, 255, .16) var(--glass-opacity-percent), rgba(196, 223, 255, .16) 100%) center / 100% 4px no-repeat;
+  box-shadow: none;
+}
+html body #repository-opacity-range::-webkit-slider-runnable-track { height: 4px; background: transparent; }
+html body #repository-opacity-range::-webkit-slider-thumb { width: 16px; height: 16px; margin-top: -6px; }
+html body #repository-opacity-range::-moz-range-track { height: 4px; background: transparent; }
+html body #repository-opacity-range::-moz-range-thumb { width: 16px; height: 16px; }
+html body #repository-opacity-range:focus-visible { outline: 2px solid var(--accent-cool); outline-offset: 2px; }
+@media (max-width: 900px) {
+  html body :is(#data-timebar, #activity-timebar) :is(.repository-view-nav, .repository-opacity-inline) { min-height: 36px; }
+}
+
+@media (max-width: 700px) {
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls { grid-template-columns: 30px 38px 30px minmax(0, 1fr); row-gap: 8px; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > .t-mid { grid-column: 1 / -1; grid-row: 1; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-prev, #activity-prev) { grid-row: 2; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-play, #activity-play) { grid-row: 2; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(#data-next, #activity-next) { grid-column: 3; grid-row: 2; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls > :is(.data-speed, .activity-speed) { grid-column: 4; grid-row: 2; }
+}
+@media (max-width: 540px) {
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls { column-gap: 2px; }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls > .repository-dock-heading { grid-template-columns: minmax(0, 1fr) auto; column-gap: 8px; row-gap: 10px; }
+  html body :is(#data-timebar, #activity-timebar) .repository-dock-tools { display: contents; }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls .repository-view-nav button { padding: 0 3px; font-size: 10px; }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls .repository-opacity-inline { gap: 4px; }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls .repository-opacity-back { width: 24px; }
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls { grid-column: 1 / -1; grid-row: 2; }
+  html body :is(#data-timebar, #activity-timebar) .repository-dock-apps { gap: 2px; }
+}
+
+/* The logo occupies the open center of the app row without moving its DOM or
+   changing the shared drag, editor, and animated disclosure behavior. */
+html body :is(#data-timebar, #activity-timebar).repository-parallel-controls:not(.is-dock-collapsed) > :is(.panel-dock-grip, .panel-dock-edit) {
+  position: relative;
+  top: auto;
+  left: auto;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  justify-self: center;
+  align-self: center;
+  transform: none;
+}
+html body :is(#data-timebar, #activity-timebar).repository-parallel-controls:not(.is-dock-collapsed) > .panel-dock-edit {
+  transform: translateX(47px);
+}
+@media (max-width: 540px) {
+  /* Keep Edit close to the logo while leaving both groups of apps clear. */
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls {
+    grid-template-rows: auto 64px;
+  }
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > :is(#repository-opacity-trigger, #repository-timeline-trigger, .repository-dock-actions, .panel-dock-grip) {
+    align-self: start;
+  }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls:not(.is-dock-collapsed) > .panel-dock-grip { width: 44px; }
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls:not(.is-dock-collapsed) > .panel-dock-edit {
+    align-self: end;
+    height: 20px;
+    min-height: 20px;
+    transform: none;
+  }
+}
+@media (max-width: 374px) {
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls {
+    grid-template-columns: 36px 36px minmax(0, 1fr);
+  }
+  html body :is(#data-timebar, #activity-timebar).panel-dock .repository-app-tile { width: 36px; min-width: 36px; }
+  html body :is(#data-timebar, #activity-timebar) .repository-app-icon { width: 32px; height: 32px; border-radius: 10px; }
+}
+
+/* An expanded Timeline grows from its app, with the scrubber as its anchor. */
+html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > #repository-timeline-trigger {
+  grid-column: 1 / -1;
+  justify-self: start;
+  left: var(--timeline-center, 50%);
+  transform: translateX(-50%);
+}
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls {
+  position: relative;
+  padding: 12px;
+  border: 1px solid rgba(154, 226, 196, .24);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(95, 182, 149, .13), rgba(43, 88, 76, .045));
+  box-shadow: inset 0 1px 0 rgba(216, 255, 237, .08), 0 4px 14px rgba(0, 0, 0, .08);
+}
+html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  left: var(--timeline-connector-x, 50%);
+  top: 100%;
+  width: 2px;
+  height: var(--timeline-connector-height, 16px);
+  transform: translateX(-50%);
+  background: linear-gradient(rgba(154, 226, 196, .25), rgba(154, 226, 196, .65));
+  box-shadow: 0 0 8px rgba(125, 229, 180, .16);
+}
+html body #repository-timeline-trigger .repository-app-icon { position: relative; }
+html body #repository-timeline-trigger[aria-expanded="true"] .repository-app-icon {
+  border-color: rgba(184, 245, 215, .8);
+  box-shadow: inset 0 1px 0 rgba(232, 255, 244, .3), 0 0 0 3px rgba(131, 218, 177, .09), 0 3px 12px rgba(55, 125, 96, .23);
+}
+html body #repository-timeline-trigger .repository-timeline-status {
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 9px;
+  height: 3px;
+  border-radius: 4px;
+  transform: translateX(-50%);
+  background: #bcebd2;
+  opacity: 0;
+}
+html body #repository-timeline-trigger[aria-expanded="true"] .repository-timeline-status { opacity: .55; }
+html body #repository-timeline-trigger[data-timeline-playing="true"] .repository-timeline-status {
+  opacity: 1;
+  background: #baffda;
+  box-shadow: 0 0 7px rgba(148, 255, 198, .65);
+  animation: timeline-playing 1.8s ease-in-out infinite;
+}
+html body .repository-timeline-controls[data-timeline-playing="true"] { border-color: rgba(161, 237, 196, .4); }
+@keyframes timeline-playing { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+@media (max-width: 700px) {
+  html body :is(#data-timebar, #activity-timebar) .repository-timeline-controls { padding: 10px; }
+}
+@media (max-width: 540px) {
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls { grid-template-rows: auto 44px auto 64px; }
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > #repository-timeline-trigger { grid-row: 2; align-self: center; }
+  html body :is(#data-timebar, #activity-timebar).panel-dock.repository-actions-dock.repository-parallel-controls > :is(#repository-opacity-trigger, .repository-dock-actions, .panel-dock-grip, .panel-dock-edit) { grid-row: 4; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body #repository-timeline-trigger[data-timeline-playing="true"] .repository-timeline-status { animation: none; }
+}
+
+/* Scene views stay open above the current lab, independently of the left tools. */
+html body :is(#data-timebar, #activity-timebar) > .repository-view-nav {
+  --view-tint: 142, 224, 231;
+  position: relative;
+  box-sizing: border-box;
+  min-width: 0;
+  padding: 10px 6px;
+  border: 1px solid rgba(var(--view-tint), .24);
+  border-radius: 16px;
+  background: linear-gradient(155deg, rgba(var(--view-tint), .13), rgba(var(--view-tint), .035));
+  box-shadow: inset 0 1px 0 rgba(var(--view-tint), .08), 0 4px 14px rgba(0, 0, 0, .08);
+}
+html body #activity-timebar > .repository-view-nav { --view-tint: 239, 193, 133; }
+html body :is(#data-timebar, #activity-timebar) > .repository-view-nav::after {
+  content: '';
+  position: absolute;
+  pointer-events: none;
+  left: var(--view-connector-x, 50%);
+  top: 100%;
+  width: 2px;
+  height: var(--view-connector-height, 16px);
+  transform: translateX(-50%);
+  background: linear-gradient(rgba(var(--view-tint), .25), rgba(var(--view-tint), .65));
+  box-shadow: 0 0 8px rgba(var(--view-tint), .16);
+}
+html body #data-timebar #tab-data .repository-app-icon {
+  border-color: rgba(178, 245, 249, .8);
+  box-shadow: inset 0 1px 0 rgba(225, 253, 255, .3), 0 0 0 3px rgba(142, 224, 231, .09), 0 3px 12px rgba(55, 119, 125, .23);
+}
+html body #activity-timebar #tab-activity .repository-app-icon {
+  border-color: rgba(251, 218, 172, .8);
+  box-shadow: inset 0 1px 0 rgba(255, 244, 225, .3), 0 0 0 3px rgba(239, 193, 133, .09), 0 3px 12px rgba(125, 88, 55, .23);
+}
+@media (max-width: 540px) {
+  /* Each expanded app keeps a clear path to its icon on compact screens. */
+  html body :is(#data-timebar, #activity-timebar).repository-parallel-controls > .repository-view-nav {
+    grid-row: 3;
+    width: 230px;
+    padding: 6px;
+  }
+}
+
+/* Keep the appearance setting readable before its slider is opened. */
+html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger.glass-opacity-trigger {
+  flex-direction: row;
+  justify-content: flex-start;
+  gap: 8px;
+  width: 112px;
+  min-width: 112px;
+  height: 44px;
+  padding: 4px 8px;
+  box-sizing: border-box;
+  border: 1px solid rgba(195, 208, 252, .25);
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(117, 137, 186, .18), rgba(59, 73, 116, .09));
+  box-shadow: inset 0 1px 0 rgba(228, 237, 255, .08);
+}
+html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger:is(:hover, [aria-expanded="true"]) {
+  border-color: rgba(208, 222, 255, .58);
+  background: linear-gradient(150deg, rgba(117, 137, 186, .3), rgba(59, 73, 116, .17));
+}
+html body #repository-opacity-trigger .repository-app-icon { width: 30px; height: 30px; border-radius: 9px; transform: none; }
+html body #repository-opacity-trigger .repository-app-icon svg { width: 20px; height: 20px; }
+html body #repository-opacity-trigger .repository-opacity-copy { display: grid; gap: 2px; text-align: left; }
+html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger .glass-opacity-text { display: block; font-size: 11px; font-weight: 500; line-height: 1.2; color: #d9e3f6; }
+html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger .glass-opacity-value { display: block; font-size: 11px; font-weight: 600; line-height: 1.2; color: #f2f5ff; font-variant-numeric: tabular-nums; }
+html body :is(#data-timebar, #activity-timebar).repository-parallel-controls .repository-opacity-inline {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid rgba(195, 208, 252, .2);
+  border-radius: 14px;
+  background: linear-gradient(150deg, rgba(117, 137, 186, .1), rgba(59, 73, 116, .04));
+}
+html body .repository-opacity-content { min-width: 0; }
+html body .repository-opacity-label { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 26px; color: #d9e3f6; font-size: 11px; font-weight: 500; }
+html body #repository-opacity-output { color: #f2f5ff; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; }
+html body #repository-opacity-description { margin: 4px 0 0; color: #b2c0d5; font-size: 10px; line-height: 1.5; }
+@media (max-width: 700px) {
+  /* Keep the narrow app slot; captions add clarity without covering its neighbors. */
+  html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger.glass-opacity-trigger {
+    flex-direction: column;
+    justify-content: center;
+    width: 44px;
+    min-width: 44px;
+    height: 64px;
+    min-height: 64px;
+    padding: 4px 2px;
+    gap: 3px;
+    border-radius: 12px;
+  }
+  html body #repository-opacity-trigger .repository-app-icon { width: 26px; height: 26px; }
+  html body #repository-opacity-trigger .repository-opacity-copy { gap: 1px; text-align: center; }
+  html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger .glass-opacity-text { font-size: 9px; }
+  html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger .glass-opacity-value { font-size: 10px; }
+}
+@media (max-width: 374px) {
+  html body :is(#data-timebar, #activity-timebar) #repository-opacity-trigger.glass-opacity-trigger { width: 36px; min-width: 36px; }
+}

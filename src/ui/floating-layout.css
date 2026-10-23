@@ -1,0 +1,199 @@
+/* Floating glass panels share small, discoverable grab handles. */
+html body .panel-drag-grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: 28px;
+  height: 26px;
+  margin-left: auto;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  color: #a0b2cb;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: 0;
+  cursor: grab;
+  touch-action: none;
+}
+html body .panel-drag-grip:hover { border-color: rgba(220, 236, 255, .16); background: rgba(210, 230, 255, .07); color: #e5f1ff; }
+html body :is(.panel-drag-grip, .panel-dock-grip):focus-visible { outline: 2px solid #b8d8f4; outline-offset: 2px; }
+html body :is(#data-guide, #activity-guide, #data-panel, #activity-panel) .list-title.panel-drag-handle { cursor: grab; gap: 8px; }
+html body :is(#data-guide, #activity-guide, #data-panel, #activity-panel) .list-title .panel-drag-grip { display: inline-flex; order: 1; font-size: 16px; line-height: 1; }
+html body :is(#data-guide-collapse, #activity-guide-collapse),
+html body :is(#data-panel, #activity-panel) :is(.data-sheet-close, .activity-sheet-close) { order: 2; }
+html body :is(#data-guide, #activity-guide) .list-title { padding-top: 9px; padding-bottom: 7px; }
+
+html body :is(#timebar, #math-timebar, #data-timebar, #activity-timebar).panel-dock {
+  padding-top: 44px;
+  z-index: 40;
+}
+html body :is(#data-timebar, #activity-timebar).panel-dock {
+  left: 50%;
+  right: auto;
+  transform: translateX(-50%);
+  width: min(680px, calc(100vw - 32px));
+}
+html body .panel-dock > .panel-dock-grip {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  display: grid;
+  place-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  color: #b4c6df;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+/* Editing is a quiet text action beside the logo, separate from dock apps. */
+html body .panel-dock > .panel-dock-edit {
+  position: absolute;
+  top: 8px;
+  left: calc(50% + 30px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto;
+  min-width: 34px;
+  height: 28px;
+  min-height: 28px;
+  margin: 0;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--glass-text-dim);
+  background: transparent;
+  box-shadow: none;
+  font: 500 11px/1.2 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  cursor: pointer;
+}
+html body .panel-dock > .panel-dock-edit:hover {
+  color: var(--glass-text);
+  border-color: var(--glass-control-edge);
+  background: var(--glass-control-fill);
+}
+
+/* Only the decorative glass moves; the logo and live layout remain steady. */
+html body :is(#timebar, #math-timebar, #data-timebar, #activity-timebar).panel-dock.is-dock-animating {
+  background: none !important;
+  border-color: transparent !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  pointer-events: none;
+}
+html body .panel-dock.is-dock-animating > .panel-dock-grip { pointer-events: auto; }
+html body .panel-dock > .dock-motion-surface {
+  position: absolute;
+  z-index: -1;
+  box-sizing: border-box;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+/* Collapse the surface itself, so the logo is the only visible dock content. */
+html body :is(#timebar, #math-timebar, #data-timebar, #activity-timebar).panel-dock.is-dock-collapsed {
+  display: block !important;
+  width: 60px !important;
+  min-width: 60px !important;
+  height: 44px !important;
+  min-height: 44px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0;
+  background: none !important;
+  box-shadow: none !important;
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  overflow: visible;
+}
+html body .panel-dock.is-dock-collapsed > :not(.panel-dock-grip) { display: none !important; }
+html body .panel-dock-grip > .panel-dock-logo {
+  display: block;
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transition: transform 150ms ease;
+}
+html body .panel-dock-grip:hover > .panel-dock-logo,
+html body .panel-dock-grip:focus-visible > .panel-dock-logo { transform: scale(1.08); }
+html body .panel-float.is-dragging { z-index: 80; }
+html body .panel-float.is-dragging :is(.panel-drag-handle, .panel-drag-grip, .panel-dock-grip) { cursor: grabbing; }
+
+/* Leave a clear lane for the centered dock on compact desktop layouts. */
+@media (min-width: 901px) and (max-width: 1440px) {
+  html body :is(#data-panel, #activity-panel).panel {
+    max-height: calc(100dvh - var(--repository-timebar-height, 82px) - 100px);
+  }
+}
+@media (min-width: 1201px) {
+  html body :is(#data-guide-body, #activity-guide-body) { max-height: calc(100dvh - 204px); }
+}
+@media (min-width: 901px) and (max-width: 1200px) {
+  html body :is(#data-guide-body, #activity-guide-body) { max-height: calc(100dvh - 264px); }
+}
+@media (max-width: 900px) {
+  html body :is(#data-timebar, #activity-timebar).panel-dock { width: calc(100vw - 20px); }
+  html body :is(#data-panel, #activity-panel, #data-guide, #activity-guide).panel:not(.is-user-positioned) {
+    bottom: calc(var(--repository-timebar-height, 136px) + 24px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  html body :is(#data-panel, #activity-panel, #data-guide, #activity-guide).panel {
+    max-height: calc(100dvh - var(--repository-timebar-height, 136px) - 170px);
+  }
+  html body :is(#data-guide-body, #activity-guide-body) { max-height: calc(100dvh - var(--repository-timebar-height, 136px) - 214px); }
+  html body.is-mobile[data-mode="math"] #equation-panel.panel:not(.is-user-positioned) {
+    bottom: calc(var(--math-timebar-height, 148px) + 24px + env(safe-area-inset-bottom, 0px));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html body .panel-dock-grip > .panel-dock-logo { transition: none; }
+}
+
+/* Repository labs keep Opacity beside the app icons and the source status in its header. */
+html body:is([data-mode="data"], [data-mode="activity"]) #btn-snap { display: none !important; }
+html body:is([data-mode="data"], [data-mode="activity"]).repository-dock-layout #topbar { display: none; }
+html body:is([data-mode="data"], [data-mode="activity"]) #help-overlay .help-card {
+  max-height: 80dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+html body :is(#data-panel, #activity-panel) > .repository-status-header { gap: 7px; }
+html body :is(#data-panel, #activity-panel) > .repository-status-header .panel-drag-grip { margin-left: 0; }
+html body :is(#data-panel, #activity-panel) > .repository-status-header #sim-date {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  gap: 5px;
+  padding: 5px 7px;
+  font-size: 9px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-transform: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+html body :is(#data-panel, #activity-panel) #sim-date #date-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+html body :is(#data-panel, #activity-panel) #sim-date .live-badge { flex: none; font-size: 8px; letter-spacing: .05em; }
+html body :is(#data-timebar, #activity-timebar) .repository-dock-actions { display: flex; align-items: center; flex: none; gap: 8px; }
+html body :is(#data-timebar, #activity-timebar) .repository-dock-actions .glass-opacity-value { display: none; }
+@media (max-width: 900px) {
+  html body :is(#data-timebar, #activity-timebar).repository-actions-dock {
+    grid-template-columns: 30px 38px 30px minmax(0, 1fr) auto;
+    column-gap: 6px;
+  }
+  html body :is(#data-timebar, #activity-timebar).repository-actions-dock > :where(:is(#data-prev, #activity-prev), :is(#data-play, #activity-play), :is(#data-next, #activity-next), :is(.data-speed, .activity-speed), .repository-dock-actions) { grid-row: 2; }
+  html body :is(#data-timebar, #activity-timebar).repository-actions-dock > :is(.data-speed, .activity-speed) { grid-column: 4; }
+  html body :is(#data-timebar, #activity-timebar).repository-actions-dock > .repository-dock-actions { grid-column: 5; }
+}
