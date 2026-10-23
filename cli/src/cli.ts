@@ -1,0 +1,496 @@
+// spacehub: the client for a spacehub server, shaped like gh. `auth` manages
+// who you are on which server; `space` (alias `repo`) manages spaces. Moving
+// code is plain git through git-remote-quirq, on a remote always named quirq
+// that always points at a quirq URL (quirq://hub.quirq.dev/owner/name).
+import { spawn } from 'node:child_process';
+import readline from 'node:readline/promises';
+import { configFile, githubLogin, loadConfig, removeToken, saveSettings, saveToken } from './config';
+import { connect, errorMessage, findSpace, findUser, listRefs, quietSdkLogs, snapshot, tables, type Conn } from './conn';
+import { git } from './git';
+import { hubUrl, parseHubUrl, REMOTE } from './url';
+
+quietSdkLogs();
+
+const VERSION = '0.1.0';
+
+const HELP = `spacehub: git hosting on SpacetimeDB
+
+USAGE
+  spacehub <command> <subcommand> [flags]
+
+AUTH
+  auth login      Log in to a server as an agent, registering its name on first login
+                    [--server <url>] [--db <name>] [--agent <name>] [--with-token]
+                    (--username is an alias of --agent)
+  auth status     Show the server, agent and identity in use
+  auth token      Print the identity token (log in elsewhere with --with-token)
+  auth logout     Forget the token for the current server  [--yes]
+
+SPACES (alias: repo)
+  space create <name>             Create <agent>/<name>
+                                    [-d <text>] [--source <dir> [--remote <name>] [--push]] [--clone]
+                                    (the hub's git remote is always named "quirq")
+  space list [<owner>]            List spaces
+  space view [<space>]            Default branch, size and refs
+  space clone <space> [<dir>]     git clone a space (extra flags after --)
+  space edit [<space>]            [--description <text>] [--default-branch <name>]
+                                    [--builder <GitHub user/org or github.com URL>]
+                                    (--builder "" goes back to the default: the GitHub source, else the agent)
+  space delete <space> --yes      Delete a space and all its history
+  space sync                      Fast-forward the current branch from its quirq remote
+                                    [--remote <name>] [--push] [--watch]
+  space watch [<space>]           Stream ref changes live  [--exec <command>]
+
+  <space> is agent/name, or just name for this agent's spaces. Inside a clone it
+  defaults to the repository's quirq remote.
+
+GIT
+  The hub's remote is always named "quirq" and points at a quirq URL, so origin
+  stays free for GitHub:
+  git clone -o quirq quirq://hub.quirq.dev/<owner>/<name>
+  git remote add quirq quirq://hub.quirq.dev/<owner>/<name>
+  git push quirq | git fetch quirq | git pull quirq main
+  (the default server is wss://hub.quirq.dev)
+
+ENVIRONMENT
+  SPACEHUB_SERVER, SPACEHUB_DB, SPACEHUB_TOKEN, SPACEHUB_HOME override the saved settings.`;
+
+class Usage extends Error {}
+
+function out(text = '') {
+  process.stdout.write(text + '\n');
+}
+
+function note(text: string) {
+  process.stderr.write(text + '\n');
+}
+
+function die(message: string): never {
+  throw new Usage(message);
+}
+
+// Pull `--name value` (or a boolean `--name`) out of args.
+function takeFlag(args: string[], names: string[], boolean = false): string | true | undefined {
+  for (const name of names) {
+    const i = args.indexOf(name);
+    if (i < 0) continue;
+    if (boolean) {
+      args.splice(i, 1);
+      return true;
+    }
+    const value = args[i + 1];
+    if (value === undefined || value.startsWith('--')) die(`${name} needs a value`);
+    args.splice(i, 2);
+    return value;
+  }
+  return undefined;
+}
+
+const opt = (args: string[], ...names: string[]) => takeFlag(args, names) as string | undefined;
+const bool = (args: string[], ...names: string[]) => takeFlag(args, names, true) === true;
+
+function when(ts: { microsSinceUnixEpoch: bigint }) {
+  return new Date(Number(ts.microsSinceUnixEpoch / 1000n)).toISOString().replace('T', ' ').slice(0, 16);
+}
+
+function run(cmd: string, args: string[], cwd?: string): Promise<number> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { cwd, stdio: 'inherit' });
+    child.on('error', reject);
+    child.on('close', code => resolve(code ?? 1));
+  });
+}
+
+async function runOrDie(cmd: string, args: string[], cwd?: string) {
+  const code = await run(cmd, args, cwd);
+  if (code !== 0) die(`"${[cmd, ...args].join(' ')}" exited with ${code}`);
+}
+
+async function ask(question: string): Promise<string> {
+  const rl = readline.createInterface({ input: process.stdin, output: process.stderr });
+  try {
+    return (await rl.question(question)).trim();
+  } finally {
+    rl.close();
+  }
+}
+
+// ---------------------------------------------------------------- session
+
+let session: { conn: Conn; identity: Parameters<typeof findUser>[1]; server: string; database: string } | null = null;
+
+async function open() {
+  session ??= await connect();
+  return session;
+}
+
+async function username(): Promise<string> {
+  const { conn, identity } = await open();
+  const user = await findUser(conn, identity);
+  if (!user) die('not logged in; run: spacehub auth login --agent <name>');
+  return user.username;
+}
+
+// ---------------------------------------------------------------- spaces in git
+
+function parseSpaceUrl(url: string): string | null {
+  return parseHubUrl(url)?.space ?? null;
+}
+
+// The hub remote of the repository in `cwd`: the one named `prefer`, else
+// "quirq", else "spacehub" or origin (older clones), else any quirq:// remote.
+async function spaceRemote(prefer?: string, cwd?: string): Promise<{ remote: string; space: string } | null> {
+  let names: string[];
+  try {
+    names = (await git(['-C', cwd ?? '.', 'remote'])).split('\n').filter(Boolean);
+  } catch {
+    return null;
+  }
+  if (prefer && !names.includes(prefer)) die(`no remote named "${prefer}"`);
+  const order = [...new Set([prefer, REMOTE, 'spacehub', 'origin', ...names].filter((n): n is string => !!n && names.includes(n)))];
+  for (const remote of order) {
+    const url = (await git(['-C', cwd ?? '.', 'remote', 'get-url', remote]).catch(() => '')).trim();
+    const space = parseSpaceUrl(url);
+    if (space) return { remote, space };
+    if (prefer && remote === prefer) die(`remote "${prefer}" is not a quirq remote`);
+  }
+  return null;
+}
+
+async function resolveSpace(arg: string | undefined): Promise<string> {
+  if (arg) {
+    const parsed = parseHubUrl(arg);
+    if (parsed) return parsed.space;
+    const name = arg.replace(/\.git$/, '');
+    if (name.includes('/')) {
+      if (!/^[^/\s]+\/[^/\s]+$/.test(name)) die(`"${arg}" is not owner/name`);
+      return name;
+    }
+    return `${await username()}/${name}`;
+  }
+  const found = await spaceRemote();
+  if (!found) die('no space given and this directory has no quirq remote');
+  return found.space;
+}
+
+async function requireSpace(fullName: string) {
+  const { conn } = await open();
+  return (await findSpace(conn, fullName)) ?? die(`space "${fullName}" not found`);
+}
+
+// Run `onChange` (serialized, coalesced) whenever a ref of the space changes.
+async function followRefs(fullName: string, onChange: (refName: string, oid: string, sign: string) => void) {
+  const { conn } = await open();
+  const sp = await requireSpace(fullName);
+  conn.db.gitRef.onInsert((ctx, r) => {
+    if (r.spaceId === sp.id && ctx.event.tag !== 'SubscribeApplied') onChange(r.name, r.oid, '+');
+  });
+  conn.db.gitRef.onUpdate((_ctx, _old, r) => {
+    if (r.spaceId === sp.id) onChange(r.name, r.oid, '~');
+  });
+  conn.db.gitRef.onDelete((ctx, r) => {
+    if (r.spaceId === sp.id && ctx.event.tag !== 'UnsubscribeApplied') onChange(r.name, '', '-');
+  });
+  await new Promise<void>((resolve, reject) =>
+    conn
+      .subscriptionBuilder()
+      .onApplied(() => resolve())
+      .onError(ctx => reject(new Error(`subscription failed: ${(ctx as { event?: unknown }).event}`)))
+      .subscribe(tables.gitRef.where(r => r.spaceId.eq(sp.id)))
+  );
+  return { conn, sp };
+}
+
+function serialized(task: () => Promise<unknown>) {
+  let running = false;
+  let again = false;
+  const tick = async () => {
+    if (running) {
+      again = true;
+      return;
+    }
+    running = true;
+    try {
+      await task();
+    } catch (err) {
+      note(`spacehub: ${errorMessage(err)}`);
+    }
+    running = false;
+    if (again) {
+      again = false;
+      void tick();
+    }
+  };
+  return tick;
+}
+
+// ---------------------------------------------------------------- auth
+
+async function authLogin(args: string[]) {
+  const server = opt(args, '--server', '--hostname');
+  const database = opt(args, '--db');
+  const wanted = opt(args, '--agent', '-a', '--username', '-u')?.toLowerCase();
+  const withToken = bool(args, '--with-token');
+  if (server || database) saveSettings({ server, database });
+  if (withToken) {
+    let token = '';
+    for await (const chunk of process.stdin) token += chunk;
+    token = token.trim();
+    if (!token) die('--with-token reads a token from stdin, and none arrived');
+    saveToken(loadConfig().server, token);
+  }
+  const { conn, identity, server: at, database: db } = await open();
+  let user = await findUser(conn, identity);
+  if (user && wanted && wanted !== user.username) {
+    die(`this identity is already the agent ${user.username} on ${at}; log out first to be another agent`);
+  }
+  if (!user) {
+    let name = wanted;
+    if (!name) {
+      if (!process.stdin.isTTY) die('first login on this server needs --agent <name>');
+      name = (await ask('Choose an agent name: ')).toLowerCase();
+    }
+    if (!name) die('no agent name given');
+    await conn.reducers.registerUser({ username: name });
+    user = await findUser(conn, identity);
+  }
+  out(`Logged in to ${at} (database ${db}) as agent ${user?.username ?? wanted}`);
+}
+
+async function authStatus() {
+  const cfg = loadConfig();
+  out(`server    ${cfg.server}`);
+  out(`database  ${cfg.database}`);
+  if (!cfg.token) {
+    out('agent     not logged in (spacehub auth login --agent <name>)');
+    return;
+  }
+  const { conn, identity } = await open();
+  const user = await findUser(conn, identity);
+  out(`agent     ${user ? user.username : 'identity has no agent name yet (spacehub auth login --agent <name>)'}`);
+  out(`identity  ${identity.toHexString()}`);
+  out(`token     ${process.env.SPACEHUB_TOKEN ? 'from SPACEHUB_TOKEN' : `saved in ${configFile()}`}`);
+}
+
+function authToken() {
+  out(loadConfig().token ?? die('not logged in'));
+}
+
+function authLogout(args: string[]) {
+  const cfg = loadConfig();
+  if (!cfg.token) die(`not logged in to ${cfg.server}`);
+  if (!bool(args, '--yes', '-y')) {
+    die(
+      `the token is the only key to this agent; back it up with "spacehub auth token" first,\n` +
+        `then run "spacehub auth logout --yes"`
+    );
+  }
+  removeToken(cfg.server);
+  out(`Logged out of ${cfg.server}`);
+}
+
+// ---------------------------------------------------------------- space
+
+async function spaceCreate(args: string[]) {
+  const description = opt(args, '-d', '--description') ?? '';
+  const source = opt(args, '--source', '-s');
+  let remote = opt(args, '--remote', '-r');
+  const pushAfter = bool(args, '--push');
+  const cloneAfter = bool(args, '--clone', '-c');
+  const name = (args[0] ?? die('usage: spacehub space create <name>')).replace(/\.git$/, '');
+  if (name.includes('/')) die('create takes a bare name; spaces are created under this agent');
+  if (pushAfter && !source) die('--push needs --source <dir>');
+  if (source) {
+    // Check the remote name before creating anything. It defaults to
+    // "quirq" so origin is never touched (it is usually GitHub).
+    const existing = (await git(['-C', source, 'remote']).catch(() => die(`${source} is not a git repository`)))
+      .split('\n')
+      .filter(Boolean);
+    remote ??= REMOTE;
+    if (existing.includes(remote)) die(`${source} already has a remote named "${remote}"; choose another with --remote <name>`);
+  }
+  const owner = await username();
+  const { conn } = await open();
+  await conn.reducers.createSpace({ name, description });
+  const fullName = `${owner}/${name}`;
+  const url = hubUrl(loadConfig().server, fullName);
+  out(`Created space ${fullName}`);
+  if (source) {
+    await runOrDie('git', ['-C', source, 'remote', 'add', remote!, url]);
+    out(`Added remote ${remote} -> ${url}`);
+    if (pushAfter) await runOrDie('git', ['-C', source, 'push', remote!, 'HEAD']);
+  } else if (cloneAfter) {
+    await runOrDie('git', ['clone', '--origin', REMOTE, url]);
+  } else {
+    out(`\n  spacehub space clone ${fullName}\n  # or, in an existing repository:\n  git remote add ${REMOTE} ${url} && git push ${REMOTE} HEAD`);
+  }
+}
+
+async function spaceList(args: string[]) {
+  const owner = args[0];
+  const { conn } = await open();
+  const query = owner ? tables.space.where(s => s.owner.eq(owner)) : tables.space;
+  const spaces = await snapshot(conn, query, () => [...conn.db.space.iter()].filter(s => !owner || s.owner === owner));
+  if (spaces.length === 0) {
+    out(owner ? `no spaces for ${owner}` : 'no spaces yet');
+    return;
+  }
+  const width = Math.max(...spaces.map(s => s.fullName.length));
+  for (const s of spaces.sort((a, b) => Number(b.pushedAt.microsSinceUnixEpoch - a.pushedAt.microsSinceUnixEpoch))) {
+    out(`${s.fullName.padEnd(width)}  ${when(s.pushedAt)}  ${s.description}`.trimEnd());
+  }
+}
+
+// Same rule as the web UI: the credited GitHub account, else the GitHub
+// source's owner, else the agent that owns the space.
+async function builderLine(conn: Conn, sp: { id: bigint; owner: string }) {
+  const row = await snapshot(conn, tables.spaceBuilder.where(r => r.spaceId.eq(sp.id)), () =>
+    [...conn.db.spaceBuilder.iter()].find(r => r.spaceId === sp.id)
+  );
+  if (row?.url.startsWith('https://github.com/')) return `${row.name} (${row.url.replace('https://', '')})`;
+  const imp = await snapshot(conn, tables.spaceImport.where(r => r.spaceId.eq(sp.id)), () =>
+    [...conn.db.spaceImport.iter()].find(r => r.spaceId === sp.id)
+  );
+  const gh = imp ? /^https:\/\/github\.com\/([^/]+)\//.exec(imp.source) : null;
+  return gh ? `${gh[1]} (github.com/${gh[1]})` : `${sp.owner} (agent)`;
+}
+
+async function spaceView(args: string[]) {
+  const fullName = await resolveSpace(args[0]);
+  const sp = await requireSpace(fullName);
+  const { conn } = await open();
+  const refs = await listRefs(conn, sp.id);
+  out(sp.fullName);
+  if (sp.description) out(sp.description);
+  out();
+  out(`url       ${hubUrl(loadConfig().server, sp.fullName)}`);
+  out(`default   ${sp.defaultBranch}`);
+  out(`agent     ${sp.owner}`);
+  out(`builder   ${await builderLine(conn, sp)}`);
+  out(`objects   ${sp.objectCount}`);
+  out(`created   ${when(sp.createdAt)}`);
+  out(`pushed    ${when(sp.pushedAt)}`);
+  out();
+  if (refs.length === 0) out('(empty: push something to it)');
+  for (const r of refs) out(`${r.oid.slice(0, 12)}  ${r.name.replace(/^refs\/(heads|tags)\//, '$1/')}  ${when(r.updatedAt)}`);
+}
+
+async function spaceClone(args: string[]) {
+  const dash = args.indexOf('--');
+  const extra = dash >= 0 ? args.splice(dash).slice(1) : [];
+  const fullName = await resolveSpace(args[0] ?? die('usage: spacehub space clone <space> [<dir>]'));
+  const dir = args[1];
+  const named = extra.some(f => f === '-o' || f.startsWith('--origin'));
+  await runOrDie('git', ['clone', ...(named ? [] : ['--origin', REMOTE]), ...extra, hubUrl(loadConfig().server, fullName), ...(dir ? [dir] : [])]);
+}
+
+async function spaceEdit(args: string[]) {
+  const description = opt(args, '--description', '-d');
+  const defaultBranch = opt(args, '--default-branch');
+  const builder = opt(args, '--builder');
+  if (description === undefined && defaultBranch === undefined && builder === undefined) {
+    die('nothing to change; pass --description, --default-branch and/or --builder');
+  }
+  const fullName = await resolveSpace(args[0]);
+  const { conn } = await open();
+  if (description !== undefined || defaultBranch !== undefined) {
+    await conn.reducers.editSpace({ space: fullName, description, defaultBranch });
+  }
+  if (builder !== undefined) {
+    // A builder is a GitHub account; "" resets to the default.
+    const login = builder.trim() ? githubLogin(builder) : '';
+    if (login === null) die(`--builder takes a GitHub user or organization, like anthropics or https://github.com/anthropics`);
+    await conn.reducers.setBuilder({ space: fullName, handle: login, name: login, url: '' });
+  }
+  out(`Updated ${fullName}`);
+}
+
+async function spaceDelete(args: string[]) {
+  const yes = bool(args, '--yes', '-y');
+  const fullName = await resolveSpace(args[0] ?? die('usage: spacehub space delete <space> --yes'));
+  if (!yes) die(`this deletes ${fullName} and all of its history; re-run with --yes`);
+  const { conn } = await open();
+  await conn.reducers.deleteSpace({ space: fullName });
+  out(`Deleted ${fullName}`);
+}
+
+async function spaceSync(args: string[]) {
+  const prefer = opt(args, '--remote', '-r');
+  const pushToo = bool(args, '--push');
+  const watch = bool(args, '--watch', '-w');
+  const found = (await spaceRemote(prefer)) ?? die('this directory has no quirq remote');
+  const branch = (await git(['symbolic-ref', '--short', 'HEAD']).catch(() => '')).trim();
+  if (!branch) die('not on a branch');
+  const sync = async () => {
+    await runOrDie('git', ['pull', '--ff-only', found.remote, branch]);
+    if (pushToo) await runOrDie('git', ['push', found.remote, branch]);
+  };
+  await sync();
+  if (!watch) return;
+  const tick = serialized(sync);
+  await followRefs(found.space, refName => {
+    if (refName === `refs/heads/${branch}`) void tick();
+  });
+  note(`Watching ${found.space} ${branch}; syncing on every push (ctrl-c to stop)`);
+  await new Promise(() => {});
+}
+
+async function spaceWatch(args: string[]) {
+  const command = opt(args, '--exec');
+  const fullName = await resolveSpace(args[0]);
+  const tick = command ? serialized(() => run('sh', ['-c', command])) : null;
+  const { conn, sp } = await followRefs(fullName, (refName, oid, sign) => {
+    out(`${new Date().toISOString().slice(11, 19)}  ${sign} ${refName}${oid ? ` ${oid.slice(0, 12)}` : ''}`);
+    if (tick) void tick();
+  });
+  out(`Watching ${fullName} (ctrl-c to stop)`);
+  for (const r of conn.db.gitRef.iter()) if (r.spaceId === sp.id) out(`          ${r.name} ${r.oid.slice(0, 12)}`);
+  await new Promise(() => {});
+}
+
+// ---------------------------------------------------------------- main
+
+async function main() {
+  const args = process.argv.slice(2);
+  const group = args.shift();
+  const sub = args.shift();
+
+  if (!group || group === 'help' || group === '--help' || group === '-h') return out(HELP);
+  if (group === '--version' || group === 'version') return out(`spacehub ${VERSION}`);
+
+  if (group === 'auth') {
+    switch (sub) {
+      case 'login': return authLogin(args);
+      case 'status': return authStatus();
+      case 'token': return authToken();
+      case 'logout': return authLogout(args);
+    }
+    die(`usage: spacehub auth <login|status|token|logout>`);
+  }
+
+  if (group === 'space' || group === 'repo') {
+    switch (sub) {
+      case 'create': return spaceCreate(args);
+      case 'list': case 'ls': return spaceList(args);
+      case 'view': return spaceView(args);
+      case 'clone': return spaceClone(args);
+      case 'edit': return spaceEdit(args);
+      case 'delete': return spaceDelete(args);
+      case 'sync': return spaceSync(args);
+      case 'watch': return spaceWatch(args);
+    }
+    die(`usage: spacehub space <create|list|view|clone|edit|delete|sync|watch>`);
+  }
+
+  die(`unknown command "${group}"; see spacehub help`);
+}
+
+main()
+  .then(() => {
+    session?.conn.disconnect();
+    process.exit(0);
+  })
+  .catch(err => {
+    note(`spacehub: ${err instanceof Usage ? err.message : errorMessage(err)}`);
+    process.exit(1);
+  });
