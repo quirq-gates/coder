@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qqdepot"
+dynamic = ["version"]
+description = "qq, the quirq infra command line: self-updating and version-pinned per repo."
+readme = "README.md"
+requires-python = ">=3.11.4"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+# Other qq repos by pinned commit, never by copying code. TODO(expert): let rollers move this pin.
+dependencies = [
+    "qqsync @ git+https://github.com/quirq-ai/sync@9821f745690d5150cac70cd2eee54c97d431e6c3",
+    "qqrecipes @ git+https://github.com/quirq-ai/recipes@daee33320e8d06be2c86ffcd3653af606bc50ada",
+]
+
+[project.optional-dependencies]
+test = ["pytest==9.1.1"]
+
+[project.scripts]
+qq = "qqdepot.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "qqdepot.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+qqdepot = ["locks/*.txt"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
