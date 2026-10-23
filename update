@@ -1,0 +1,3 @@
+#!/bin/sh
+# Snapshot every git repository here again and push the branches that changed (xo create space, run in the space's folder).
+exec xo create space --owner quirq-gates "$@"

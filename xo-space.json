@@ -1,0 +1,32 @@
+{
+  "branches": {
+    "qq-tools/depot": {
+      "bytes": 267752,
+      "commit": "f87950012818c8e5b9844453f9bac1d48e6e9f64",
+      "files": 42,
+      "tree": "c71c9011f750a89de32b54c71eeb420b5c23ebbc"
+    },
+    "quirqy": {
+      "bytes": 29661934,
+      "commit": "d1efb5b6784abf1261339b7ffebfc1e6659e02b7",
+      "files": 204,
+      "tree": "07ee29781be678950ef4870ef8d8891a672515f8"
+    },
+    "space-hub": {
+      "bytes": 362885,
+      "commit": "cc7673d18c1d85ad0e7a5915166ed7021adf9e84",
+      "files": 66,
+      "tree": "50e4f608669f72cde86241a21940b051053c5596"
+    },
+    "xo-coworker": {
+      "bytes": 1076014,
+      "commit": "5e5a7b940e614c3245125a47e25a190cce138c96",
+      "files": 53,
+      "tree": "ace540384c5d20c3b2e503823b032233bfbf8c2e"
+    }
+  },
+  "github": "quirq-gates/coder",
+  "hash": "sha256:492f1bd488372ebde98cd60858467a2a44899ba8d904b1d127d2afe6644d9f00",
+  "schema": "xo-space/1",
+  "space": "coder"
+}
